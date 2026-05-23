@@ -39,7 +39,12 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS configurations
+# Custom security and tracking middlewares
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(PlatformValidationMiddleware)
+app.add_middleware(RequestIdMiddleware)
+
+# CORS configurations (must be added last so it is the outermost middleware)
 if settings.BACKEND_CORS_ORIGINS:
     app.add_middleware(
         CORSMiddleware,
@@ -48,11 +53,6 @@ if settings.BACKEND_CORS_ORIGINS:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
-# Custom security and tracking middlewares
-app.add_middleware(SecurityHeadersMiddleware)
-app.add_middleware(PlatformValidationMiddleware)
-app.add_middleware(RequestIdMiddleware)
 
 # Register API Router
 app.include_router(api_router, prefix=settings.API_V1_STR)
