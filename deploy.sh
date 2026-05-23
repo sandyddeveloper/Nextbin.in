@@ -27,23 +27,18 @@ nohup bash -c "
   sleep 3
   
   echo '🛑 Stopping old NILA processes...'
-  # Find and kill the nila.py process (which will clean up its child FastAPI and Huey processes)
+  # Find and kill the nila.py process (which will clean up its child processes)
   pkill -f 'python.*nila.py' || true
   pkill -f uvicorn || true
   pkill -f 'huey.bin.huey_consumer' || true
+  pkill cloudflared || true
   sleep 2
   
   echo '🚀 Starting NILA service in background...'
-  # Run nila.py to boot both API and Huey worker processes
+  # Run nila.py to boot API, Huey worker, and Cloudflare Tunnel
   nohup python nila.py > logs/nila.log 2>&1 &
   
-  # Restart Cloudflare tunnel if configured
-  echo '🌐 Restarting cloudflared tunnel...'
-  pkill cloudflared || true
-  sleep 1
-  nohup cloudflared tunnel --url http://localhost:8000 > logs/cloudflared.log 2>&1 &
-  
-  # Wait for cloudflared to establish the tunnel
+  # Wait for cloudflared (managed by nila.py) to establish the tunnel
   sleep 6
   CF_URL=$(grep -oE "https://[a-zA-Z0-9-]+\.trycloudflare\.com" logs/cloudflared.log | head -n 1 || true)
   if [ ! -z "$CF_URL" ]; then
@@ -57,4 +52,5 @@ nohup bash -c "
 " > logs/deploy_exec.log 2>&1 &
 
 echo "🚀 [Deploy] Webhook deployment processed successfully!"
+
 

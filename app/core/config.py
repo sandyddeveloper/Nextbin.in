@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     ENCRYPTION_KEY: str  # Fernet key for encrypting sensitive credentials
     DEPLOY_SECRET: str = "mysecret123"
+    CLOUDFLARE_TUNNEL_NAME: str = ""  # Custom Cloudflare Tunnel Name (e.g. 'nila-tunnel')
 
     # Database Configuration
     DATABASE_URL: str = "sqlite+aiosqlite:///./data/nextbin.db"

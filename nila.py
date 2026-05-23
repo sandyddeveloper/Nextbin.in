@@ -5,6 +5,7 @@ import threading
 import time
 import ctypes
 import socket
+import shutil
 from app.core.config import settings
 
 def enable_windows_ansi():
@@ -188,6 +189,33 @@ def main():
         stderr=subprocess.STDOUT,
         bufsize=0
     )
+
+    # Launch Cloudflare tunnel automatically if installed
+    cf_exe = shutil.which("cloudflared")
+    cf_process = None
+    if cf_exe:
+        os.makedirs("logs", exist_ok=True)
+        cf_log = open(os.path.join("logs", "cloudflared.log"), "w", encoding="utf-8")
+        
+        tunnel_name = getattr(settings, "CLOUDFLARE_TUNNEL_NAME", None)
+        if tunnel_name:
+            cf_cmd = [cf_exe, "tunnel", "run", tunnel_name]
+            print(f"{YELLOW}[Nila]{RESET} Auto-starting Cloudflare Tunnel: {CYAN}{tunnel_name}{RESET}...")
+        else:
+            cf_cmd = [cf_exe, "tunnel", "--url", f"http://localhost:{port_num}"]
+            print(f"{YELLOW}[Nila]{RESET} Auto-starting temporary Cloudflare Tunnel...")
+            
+        try:
+            cf_process = subprocess.Popen(
+                cf_cmd,
+                stdout=cf_log,
+                stderr=subprocess.STDOUT,
+                bufsize=0
+            )
+        except Exception as e:
+            print(f"{RED}[Nila] Failed to start Cloudflare Tunnel: {e}{RESET}")
+    else:
+        print(f"{YELLOW}[Nila]{RESET} cloudflared not found on system PATH. Skipping auto-tunnel.")
     
     # Start separate thread supervisors to read stdout/stderr from both processes in real time
     # 95 = Magenta prefix for API, 92 = Green prefix for Worker
@@ -216,6 +244,9 @@ def main():
             if worker_process.poll() is not None:
                 print(f"\n{RED}[Nila] Huey Worker stopped unexpectedly (Exit code: {worker_process.returncode}){RESET}")
                 break
+            if cf_process and cf_process.poll() is not None:
+                print(f"\n{RED}[Nila] Cloudflare Tunnel stopped unexpectedly (Exit code: {cf_process.returncode}){RESET}")
+                cf_process = None
             time.sleep(1)
     except KeyboardInterrupt:
         print(f"\n{YELLOW}[Nila] Interrupt received. Shutting down NILA services...{RESET}")
@@ -223,15 +254,27 @@ def main():
         # Gracefully terminate child processes
         api_process.terminate()
         worker_process.terminate()
+        if cf_process:
+            try:
+                cf_process.terminate()
+            except Exception:
+                pass
         
         # Give them a few seconds to clean up, otherwise force kill
         try:
             api_process.wait(timeout=3)
             worker_process.wait(timeout=3)
+            if cf_process:
+                cf_process.wait(timeout=3)
         except subprocess.TimeoutExpired:
             print(f"{RED}[Nila] Processes timed out during termination. Forcing kill...{RESET}")
             api_process.kill()
             worker_process.kill()
+            if cf_process:
+                try:
+                    cf_process.kill()
+                except Exception:
+                    pass
             
         print(f"{GREEN}[Nila] All services stopped successfully.{RESET}")
 
