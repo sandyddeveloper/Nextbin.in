@@ -17,7 +17,7 @@ async def get_current_user(
     token: str = Depends(reusable_oauth2)
 ) -> User:
     """
-    Dependency to validate JWT authorization and retrieve the authenticated User context.
+    Dependency  validate JWT authorization and retrieve the authenticated User context.
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
