@@ -114,7 +114,7 @@ fun DashboardOverviewTab(refreshTrigger: Int) {
                     StatCard(
                         title = "Security Events",
                         value = auditLogs.size.toString(),
-                        subtext = if (auditLogs.isNotEmpty()) auditLogs.first().action else "No recent events",
+                        subtext = if (auditLogs.isNotEmpty()) (auditLogs.first().action ?: "No recent events") else "No recent events",
                         icon = Icons.Default.Shield,
                         accentColor = CyanAccent
                     )
@@ -182,16 +182,8 @@ fun StatCard(
 
 @Composable
 fun AuditStreamItem(log: AuditLog) {
-    // Parse time
-    val formattedTime = try {
-        // Format e.g., 2026-05-24T03:59:14 -> 03:59 AM
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
-        val outputFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
-        val date = inputFormat.parse(log.createdAt.substring(0, 19))
-        outputFormat.format(date!!)
-    } catch (e: Exception) {
-        log.createdAt.split("T").lastOrNull()?.substring(0, 5) ?: ""
-    }
+    // Parse time robustly
+    val formattedTime = formatAuditTime(log.createdAt)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -206,7 +198,7 @@ fun AuditStreamItem(log: AuditLog) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = log.action,
+                    text = log.action ?: "UNKNOWN",
                     color = Primary,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold
@@ -237,4 +229,39 @@ fun AuditStreamItem(log: AuditLog) {
             }
         }
     }
+}
+
+fun formatAuditTime(rawTime: String?): String {
+    if (rawTime.isNullOrBlank()) return ""
+    val formats = listOf(
+        "yyyy-MM-dd'T'HH:mm:ss.SSS",
+        "yyyy-MM-dd'T'HH:mm:ss",
+        "yyyy-MM-dd HH:mm:ss",
+        "yyyy-MM-dd'T'HH:mm",
+        "yyyy-MM-dd"
+    )
+    for (format in formats) {
+        try {
+            val inputFormat = SimpleDateFormat(format, Locale.getDefault())
+            val date = inputFormat.parse(rawTime)
+            if (date != null) {
+                val outputFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+                return outputFormat.format(date)
+            }
+        } catch (e: Exception) {
+            // continue
+        }
+    }
+    // Fallback split parsing
+    try {
+        val parts = rawTime.split(Regex("[T ]"))
+        if (parts.size > 1) {
+            val timePart = parts[1]
+            return if (timePart.length >= 5) timePart.substring(0, 5) else timePart
+        }
+        if (rawTime.length >= 5) {
+            return rawTime.substring(0, 5)
+        }
+    } catch (e: Exception) {}
+    return rawTime
 }

@@ -19,20 +19,20 @@ data class TokenResponse(
 
 data class UserResponse(
     val id: Int,
-    val email: String,
+    val email: String?,
     @SerializedName("full_name") val fullName: String?,
-    @SerializedName("is_active") val isActive: Boolean,
-    @SerializedName("is_superuser") val isSuperuser: Boolean
+    @SerializedName("is_active") val isActive: Boolean?,
+    @SerializedName("is_superuser") val isSuperuser: Boolean?
 )
 
 data class MonitoredProject(
     val id: Int,
-    val name: String,
-    val url: String,
-    @SerializedName("is_active") val isActive: Boolean,
-    @SerializedName("check_interval_seconds") val checkIntervalSeconds: Int,
-    @SerializedName("expected_status_code") val expectedStatusCode: Int,
-    @SerializedName("last_status") val lastStatus: String,
+    val name: String?,
+    val url: String?,
+    @SerializedName("is_active") val isActive: Boolean?,
+    @SerializedName("check_interval_seconds") val checkIntervalSeconds: Int?,
+    @SerializedName("expected_status_code") val expectedStatusCode: Int?,
+    @SerializedName("last_status") val lastStatus: String?,
     @SerializedName("last_checked_at") val lastCheckedAt: String?,
     @SerializedName("last_error") val lastError: String?
 )
@@ -59,16 +59,16 @@ data class PerformanceMetric(
     @SerializedName("response_time_ms") val responseTimeMs: Int,
     @SerializedName("status_code") val statusCode: Int?,
     @SerializedName("ssl_days_remaining") val sslDaysRemaining: Int?,
-    @SerializedName("is_up") val isUp: Boolean,
+    @SerializedName("is_up") val isUp: Boolean?,
     @SerializedName("error_message") val errorMessage: String?,
-    val timestamp: String
+    val timestamp: String?
 )
 
 data class InstagramAccount(
     val id: Int,
-    val username: String,
-    @SerializedName("is_active") val isActive: Boolean,
-    val status: String,
+    val username: String?,
+    @SerializedName("is_active") val isActive: Boolean?,
+    val status: String?,
     @SerializedName("last_synced_at") val lastSyncedAt: String?
 )
 
@@ -81,9 +81,9 @@ data class InstagramAccountCreate(
 data class InstagramRule(
     val id: Int,
     @SerializedName("account_id") val accountId: Int,
-    @SerializedName("trigger_keyword") val triggerKeyword: String,
-    @SerializedName("response_text") val responseText: String,
-    @SerializedName("is_active") val isActive: Boolean
+    @SerializedName("trigger_keyword") val triggerKeyword: String?,
+    @SerializedName("response_text") val responseText: String?,
+    @SerializedName("is_active") val isActive: Boolean?
 )
 
 data class InstagramRuleCreate(
@@ -95,23 +95,23 @@ data class InstagramRuleCreate(
 data class InstagramChatLog(
     val id: Int,
     @SerializedName("account_id") val accountId: Int,
-    @SerializedName("thread_id") val threadId: String,
-    @SerializedName("message_id") val messageId: String,
-    @SerializedName("sender_username") val senderUsername: String,
+    @SerializedName("thread_id") val threadId: String?,
+    @SerializedName("message_id") val messageId: String?,
+    @SerializedName("sender_username") val senderUsername: String?,
     val text: String?,
-    val direction: String, // INCOMING, OUTGOING
-    val timestamp: String
+    val direction: String?, // INCOMING, OUTGOING
+    val timestamp: String?
 )
 
 data class AuditLog(
     val id: Int,
     @SerializedName("user_id") val userId: Int?,
-    val action: String,
+    val action: String?,
     @SerializedName("request_id") val requestId: String?,
     val platform: String?,
     @SerializedName("ip_address") val ipAddress: String?,
     val details: Map<String, Any>?,
-    @SerializedName("created_at") val createdAt: String
+    @SerializedName("created_at") val createdAt: String?
 )
 
 // ==========================================
@@ -246,7 +246,7 @@ object ApiClient {
                 }
                 
                 // Enforce Platform Header if backend middleware checks for client platform
-                requestBuilder.addHeader("X-Platform", "Android-Mobile")
+                requestBuilder.addHeader("X-Platform", "android")
                 
                 chain.proceed(requestBuilder.build())
             }
@@ -272,9 +272,10 @@ object ApiClient {
 // ==========================================
 
 data class ApiErrorResponse(
-    val status: String,
-    val message: String,
-    val errors: Any?
+    val status: String?,
+    val message: String?,
+    val errors: Any?,
+    val detail: String?
 )
 
 fun Throwable.toApiErrorMessage(): String {
@@ -283,7 +284,7 @@ fun Throwable.toApiErrorMessage(): String {
             val errorBody = response()?.errorBody()?.string()
             try {
                 val parsed = com.google.gson.Gson().fromJson(errorBody, ApiErrorResponse::class.java)
-                parsed.message
+                parsed.message ?: parsed.detail ?: "Error ${code()}: ${message()}"
             } catch (ex: Exception) {
                 "Error ${code()}: ${message()}"
             }

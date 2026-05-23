@@ -5,6 +5,7 @@ import hashlib
 import subprocess
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException, status
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import engine

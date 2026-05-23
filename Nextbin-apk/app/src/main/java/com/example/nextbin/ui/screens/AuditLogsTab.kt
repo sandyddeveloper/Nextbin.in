@@ -86,18 +86,11 @@ fun AuditLogsTab(refreshTrigger: Int) {
 fun AuditLogItemCard(log: AuditLog) {
     var expanded by remember { mutableStateOf(false) }
 
-    val isAlertAction = log.action.contains("FAILED") || log.action.contains("DELETED") || log.action.contains("UNLINKED")
+    val action = log.action ?: "UNKNOWN"
+    val isAlertAction = action.contains("FAILED") || action.contains("DELETED") || action.contains("UNLINKED")
     val actionColor = if (isAlertAction) DownRed else UpGreen
 
-    val formattedDate = try {
-        // Format e.g., 2026-05-24T03:59:14 -> 24 May 2026, 03:59 AM
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
-        val outputFormat = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
-        val date = inputFormat.parse(log.createdAt.substring(0, 19))
-        outputFormat.format(date!!)
-    } catch (e: Exception) {
-        log.createdAt.replace("T", " ")
-    }
+    val formattedDate = formatAuditDate(log.createdAt)
 
     Card(
         modifier = Modifier
@@ -122,7 +115,7 @@ fun AuditLogItemCard(log: AuditLog) {
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = log.action,
+                        text = action,
                         color = actionColor,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold
@@ -216,4 +209,28 @@ fun AuditLogItemCard(log: AuditLog) {
             }
         }
     }
+}
+
+fun formatAuditDate(rawTime: String?): String {
+    if (rawTime.isNullOrBlank()) return ""
+    val formats = listOf(
+        "yyyy-MM-dd'T'HH:mm:ss.SSS",
+        "yyyy-MM-dd'T'HH:mm:ss",
+        "yyyy-MM-dd HH:mm:ss",
+        "yyyy-MM-dd'T'HH:mm",
+        "yyyy-MM-dd"
+    )
+    for (format in formats) {
+        try {
+            val inputFormat = SimpleDateFormat(format, Locale.getDefault())
+            val date = inputFormat.parse(rawTime)
+            if (date != null) {
+                val outputFormat = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
+                return outputFormat.format(date)
+            }
+        } catch (e: Exception) {
+            // continue
+        }
+    }
+    return rawTime.replace("T", " ")
 }

@@ -291,13 +291,13 @@ fun MonitorItemCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = project.name,
+                        text = project.name ?: "Unknown Monitor",
                         color = Color.White,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = project.url,
+                        text = project.url ?: "",
                         color = Color.Gray,
                         fontSize = 11.sp,
                         modifier = Modifier.padding(top = 2.dp)
@@ -333,15 +333,15 @@ fun MonitorItemCard(
                     ) {
                         Column {
                             Text("Interval", color = Color.Gray, fontSize = 10.sp)
-                            Text("${project.checkIntervalSeconds}s", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("${project.checkIntervalSeconds ?: 300}s", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                         Column {
                             Text("Expected Code", color = Color.Gray, fontSize = 10.sp)
-                            Text("${project.expectedStatusCode}", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("${project.expectedStatusCode ?: 200}", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                         Column {
                             Text("Status", color = Color.Gray, fontSize = 10.sp)
-                            Text(project.lastStatus, color = statusColor, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                            Text(project.lastStatus ?: "UNKNOWN", color = statusColor, fontSize = 12.sp, fontWeight = FontWeight.Black)
                         }
                     }
 
@@ -349,7 +349,7 @@ fun MonitorItemCard(
                         Spacer(modifier = Modifier.height(12.dp))
                         Text("Last Error", color = Color.Gray, fontSize = 10.sp)
                         Text(
-                            text = project.lastError,
+                            text = project.lastError ?: "",
                             color = DownRed,
                             fontSize = 11.sp,
                             modifier = Modifier
