@@ -56,8 +56,9 @@ class PlatformValidationMiddleware(BaseHTTPMiddleware):
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={
-                    "detail": "X-Platform header is required for secure endpoints. "
-                              "Must be one of: 'web', 'ios', 'android'."
+                    "status": "failed",
+                    "message": "X-Platform header is required for secure endpoints. Must be one of: 'web', 'ios', 'android'.",
+                    "errors": None
                 }
             )
             
@@ -66,7 +67,9 @@ class PlatformValidationMiddleware(BaseHTTPMiddleware):
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={
-                    "detail": f"Invalid X-Platform value '{platform}'. Must be one of: 'web', 'ios', 'android'."
+                    "status": "failed",
+                    "message": f"Invalid X-Platform value '{platform}'. Must be one of: 'web', 'ios', 'android'.",
+                    "errors": None
                 }
             )
             

@@ -169,7 +169,7 @@ def main():
     bindir = os.path.dirname(python_exe)
     uvicorn_exe = os.path.join(bindir, "uvicorn.exe" if os.name == 'nt' else "uvicorn")
     
-    reload_args = ["--reload"] if settings.DEBUG else []
+    reload_args = ["--reload", "--reload-dir", "app"] if settings.DEBUG else []
     if os.path.exists(uvicorn_exe):
         api_cmd = [uvicorn_exe, "app.main:app", "--host", host_addr, "--port", str(port_num)] + reload_args
     else:

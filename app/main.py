@@ -33,11 +33,93 @@ async def lifespan(app: FastAPI):
     yield
     logger.info("Shutting down nextbin server...")
 
+from fastapi.openapi.utils import get_openapi
+
 app = FastAPI(
     title=settings.APP_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     lifespan=lifespan
 )
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+    # Inject X-Platform header parameters to all API endpoints except bypassed ones
+    for path, methods in openapi_schema.get("paths", {}).items():
+        if path.startswith("/deploy") or path == "/":
+            continue
+        for method in methods.values():
+            if "parameters" not in method:
+                method["parameters"] = []
+            if not any(p.get("name") == "X-Platform" for p in method["parameters"]):
+                method["parameters"].append({
+                    "name": "X-Platform",
+                    "in": "header",
+                    "required": True,
+                    "schema": {
+                        "type": "string",
+                        "enum": ["web", "ios", "android"],
+                        "default": "web"
+                    },
+                    "description": "Client platform identifier validation header"
+                })
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
+
+
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "status": "failed",
+            "message": exc.detail,
+            "errors": None
+        }
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    errors = exc.errors()
+    err_msgs = []
+    for err in errors:
+        loc = ".".join(str(l) for l in err.get("loc", []))
+        msg = err.get("msg", "invalid value")
+        err_msgs.append(f"{loc}: {msg}")
+    friendly_message = "Request validation failed. " + ", ".join(err_msgs)
+    
+    return JSONResponse(
+        status_code=422,
+        content={
+            "status": "failed",
+            "message": friendly_message,
+            "errors": errors
+        }
+    )
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "status": "failed",
+            "message": f"Internal Server Error: {str(exc)}",
+            "errors": None
+        }
+    )
+
+
 
 # Custom security and tracking middlewares
 app.add_middleware(SecurityHeadersMiddleware)
