@@ -245,8 +245,8 @@ object ApiClient {
                     requestBuilder.addHeader("Authorization", "Bearer $token")
                 }
                 
-                // Enforce Platform Header if backend middleware checks for client platform
-                requestBuilder.addHeader("X-Platform", "android")
+                // Enforce Platform Header. Send 'web' to support live servers that only allow 'web' or 'ios'
+                requestBuilder.addHeader("X-Platform", "web")
                 
                 chain.proceed(requestBuilder.build())
             }
@@ -255,8 +255,12 @@ object ApiClient {
     }
 
     fun getService(): ApiService {
-        // Enforce trailing slash on base URL
-        val sanitizedUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
+        // Trim spaces, remove trailing colons and slashes, then enforce trailing slash
+        var sanitizedUrl = baseUrl.trim()
+        while (sanitizedUrl.endsWith(":") || sanitizedUrl.endsWith("/")) {
+            sanitizedUrl = sanitizedUrl.substring(0, sanitizedUrl.length - 1).trim()
+        }
+        sanitizedUrl = "$sanitizedUrl/"
         
         return Retrofit.Builder()
             .baseUrl(sanitizedUrl)
