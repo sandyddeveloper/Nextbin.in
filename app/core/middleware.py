@@ -43,8 +43,8 @@ class PlatformValidationMiddleware(BaseHTTPMiddleware):
         # Resolve path
         path = request.url.path
         
-        # Check if the route is bypassed
-        if path in BYPASS_ROUTES or path.startswith("/docs") or path.startswith("/redoc"):
+        # Check if the route is bypassed or is an OPTIONS preflight request
+        if request.method == "OPTIONS" or path in BYPASS_ROUTES or path.startswith("/docs") or path.startswith("/redoc"):
             request.state.platform = request.headers.get("X-Platform", "unknown")
             return await call_next(request)
             
