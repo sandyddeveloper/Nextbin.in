@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     ENCRYPTION_KEY: str  # Fernet key for encrypting sensitive credentials
+    DEPLOY_SECRET: str = "mysecret123"
 
     # Database Configuration
     DATABASE_URL: str = "sqlite+aiosqlite:///./data/nextbin.db"

@@ -65,6 +65,32 @@ def read_stream(stream, prefix, color_code):
             print(f"{color}{prefix}{reset} {decoded_line}")
     stream.close()
 
+def watch_cloudflare_tunnel():
+    """
+    Watches logs/cloudflared.log for a trycloudflare URL and prints it.
+    """
+    import re
+    log_path = os.path.join("logs", "cloudflared.log")
+    seen_url = None
+    while True:
+        if os.path.exists(log_path):
+            try:
+                with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
+                    content = f.read()
+                    match = re.search(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com", content)
+                    if match:
+                        url = match.group(0)
+                        if url != seen_url:
+                            seen_url = url
+                            # Save to file
+                            os.makedirs("logs", exist_ok=True)
+                            with open(os.path.join("logs", "cloudflare_url.txt"), "w") as out:
+                                out.write(url)
+                            print(f"\n\033[96m🌐 [Cloudflare] Public Tunnel URL active:\033[0m \033[92m\033[1m{url}\033[0m\n")
+            except Exception:
+                pass
+        time.sleep(2)
+
 def main():
     try:
         sys.stdout.reconfigure(encoding='utf-8')
@@ -173,6 +199,10 @@ def main():
     
     api_thread.start()
     worker_thread.start()
+    
+    cf_watcher_thread = threading.Thread(target=watch_cloudflare_tunnel)
+    cf_watcher_thread.daemon = True
+    cf_watcher_thread.start()
     
     print(f"\n{GREEN}✔ NILA services are now online and monitoring.{RESET}")
     print(f"{RED}Press Ctrl+C to terminate all services.{RESET}\n")

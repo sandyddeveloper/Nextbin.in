@@ -12,6 +12,7 @@ BYPASS_ROUTES = [
     "/docs",
     "/redoc",
     "/api/v1/openapi.json",
+    "/deploy",
 ]
 
 class RequestIdMiddleware(BaseHTTPMiddleware):
