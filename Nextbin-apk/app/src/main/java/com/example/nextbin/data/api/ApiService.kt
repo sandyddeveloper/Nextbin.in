@@ -25,6 +25,12 @@ data class UserResponse(
     @SerializedName("is_superuser") val isSuperuser: Boolean?
 )
 
+data class UserUpdate(
+    val email: String? = null,
+    val password: String? = null,
+    @SerializedName("full_name") val fullName: String? = null
+)
+
 data class MonitoredProject(
     val id: Int,
     val name: String?,
@@ -110,7 +116,7 @@ data class AuditLog(
     @SerializedName("request_id") val requestId: String?,
     val platform: String?,
     @SerializedName("ip_address") val ipAddress: String?,
-    val details: Map<String, Any>?,
+    val details: com.google.gson.JsonElement?,
     @SerializedName("created_at") val createdAt: String?
 )
 
@@ -130,6 +136,11 @@ interface ApiService {
 
     @GET("api/v1/auth/me")
     suspend fun getMe(): UserResponse
+
+    @PUT("api/v1/auth/me")
+    suspend fun updateMe(
+        @Body update: UserUpdate
+    ): UserResponse
 
     @GET("api/v1/auth/audit-logs")
     suspend fun getAuditLogs(

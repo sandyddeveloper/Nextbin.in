@@ -3,7 +3,12 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from app.core.database import get_db
-from app.api.deps import get_current_user
+from app.api.deps import (
+    get_current_user,
+    HasActivePermission,
+    ProjectPerms,
+    MonitoringPerms
+)
 from app.models.user import User
 from app.modules.monitoring.models import MonitoredProject, PerformanceMetric
 from app.schemas.project import (
@@ -17,7 +22,7 @@ from app.services.audit import log_audit_action
 
 router = APIRouter()
 
-@router.post("/", response_model=MonitoredProjectResponse)
+@router.post("/", response_model=MonitoredProjectResponse, dependencies=[Depends(HasActivePermission(ProjectPerms.MANAGE_PROJECTS))])
 async def create_monitored_project(
     project_in: MonitoredProjectCreate,
     request: Request,
@@ -52,7 +57,7 @@ async def create_monitored_project(
     
     return new_project
 
-@router.get("/", response_model=List[MonitoredProjectResponse])
+@router.get("/", response_model=List[MonitoredProjectResponse], dependencies=[Depends(HasActivePermission(ProjectPerms.VIEW_PROJECTS))])
 async def list_monitored_projects(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -63,7 +68,7 @@ async def list_monitored_projects(
     result = await db.execute(select(MonitoredProject))
     return result.scalars().all()
 
-@router.get("/{project_id}", response_model=MonitoredProjectResponse)
+@router.get("/{project_id}", response_model=MonitoredProjectResponse, dependencies=[Depends(HasActivePermission(ProjectPerms.VIEW_PROJECTS))])
 async def read_project_config(
     project_id: int,
     db: AsyncSession = Depends(get_db),
@@ -75,7 +80,7 @@ async def read_project_config(
         raise HTTPException(status_code=404, detail="Project not found")
     return project
 
-@router.put("/{project_id}", response_model=MonitoredProjectResponse)
+@router.put("/{project_id}", response_model=MonitoredProjectResponse, dependencies=[Depends(HasActivePermission(ProjectPerms.MANAGE_PROJECTS))])
 async def update_project_config(
     project_id: int,
     project_in: MonitoredProjectUpdate,
@@ -105,7 +110,7 @@ async def update_project_config(
     
     return project
 
-@router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(HasActivePermission(ProjectPerms.MANAGE_PROJECTS))])
 async def delete_project(
     project_id: int,
     request: Request,
@@ -131,7 +136,7 @@ async def delete_project(
     
     return None
 
-@router.get("/{project_id}/metrics", response_model=List[PerformanceMetricResponse])
+@router.get("/{project_id}/metrics", response_model=List[PerformanceMetricResponse], dependencies=[Depends(HasActivePermission(MonitoringPerms.VIEW_METRICS))])
 async def read_project_metrics(
     project_id: int,
     limit: int = 100,
@@ -149,7 +154,7 @@ async def read_project_metrics(
     )
     return result.scalars().all()
 
-@router.post("/{project_id}/trigger", response_model=dict)
+@router.post("/{project_id}/trigger", response_model=dict, dependencies=[Depends(HasActivePermission(ProjectPerms.MANAGE_PROJECTS))])
 async def trigger_manual_ping(
     project_id: int,
     request: Request,

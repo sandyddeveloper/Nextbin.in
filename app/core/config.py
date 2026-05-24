@@ -46,6 +46,13 @@ class Settings(BaseSettings):
     INSTAGRAM_TIMEOUT: int = 30
     INSTAGRAM_MAX_RETRIES: int = 3
 
+    # Nila Gravity & OneSignal Configuration
+    EMAIL_USER: str = ""
+    EMAIL_PASS: str = ""
+    ONESIGNAL_APP_ID: str = ""
+    ONESIGNAL_API_KEY: str = ""
+    NEXT_PUBLIC_API_URL: str = "http://localhost:3000"
+
     @property
     def sqlite_db_path(self) -> Path:
         # Helper to extract SQLite file path from DATABASE_URL

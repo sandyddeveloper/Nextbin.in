@@ -165,10 +165,46 @@ fun AuditLogItemCard(log: AuditLog) {
                             .padding(10.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        if (log.details.isNullOrEmpty()) {
+                        val detailsMap = remember(log.details) {
+                            try {
+                                if (log.details == null || log.details.isJsonNull) {
+                                    emptyMap()
+                                } else if (log.details.isJsonObject) {
+                                    val obj = log.details.asJsonObject
+                                    val map = mutableMapOf<String, String>()
+                                    for (entry in obj.entrySet()) {
+                                        map[entry.key] = entry.value.asString
+                                    }
+                                    map
+                                } else if (log.details.isJsonPrimitive && log.details.asJsonPrimitive.isString) {
+                                    val parser = com.google.gson.JsonParser()
+                                    val parsedElement = parser.parse(log.details.asString)
+                                    if (parsedElement.isJsonObject) {
+                                        val obj = parsedElement.asJsonObject
+                                        val map = mutableMapOf<String, String>()
+                                        for (entry in obj.entrySet()) {
+                                            map[entry.key] = entry.value.asString
+                                        }
+                                        map
+                                    } else {
+                                        mapOf("details" to log.details.asString)
+                                    }
+                                } else {
+                                    mapOf("details" to log.details.toString())
+                                }
+                            } catch (e: Exception) {
+                                try {
+                                    mapOf("details" to log.details!!.toString())
+                                } catch (ex: Exception) {
+                                    emptyMap()
+                                }
+                            }
+                        }
+
+                        if (detailsMap.isEmpty()) {
                             Text("No extra details recorded.", color = Color.DarkGray, fontSize = 11.sp)
                         } else {
-                            log.details.forEach { (key, value) ->
+                            detailsMap.forEach { (key, value) ->
                                 Row(modifier = Modifier.fillMaxWidth()) {
                                     Text(
                                         text = "$key: ",
@@ -178,7 +214,7 @@ fun AuditLogItemCard(log: AuditLog) {
                                         modifier = Modifier.width(100.dp)
                                     )
                                     Text(
-                                        text = value.toString(),
+                                        text = value,
                                         color = Color.LightGray,
                                         fontSize = 11.sp,
                                         modifier = Modifier.weight(1f)

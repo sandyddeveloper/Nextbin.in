@@ -41,21 +41,18 @@ fun DashboardOverviewTab(refreshTrigger: Int) {
             errorMessage = null
             try {
                 val service = ApiClient.getService()
-                val projectsDeferred = async { service.getProjects() }
-                val accountsDeferred = async { service.getInstagramAccounts() }
-                val logsDeferred = async { service.getAuditLogs(10) }
 
-                val projects = projectsDeferred.await()
+                val projects = service.getProjects()
                 monitorsCount = projects.size
                 upMonitors = projects.count { it.lastStatus == "UP" }
                 downMonitors = projects.count { it.lastStatus == "DOWN" }
 
-                val accounts = accountsDeferred.await()
+                val accounts = service.getInstagramAccounts()
                 igCount = accounts.size
                 connectedIg = accounts.count { it.status == "CONNECTED" }
                 issueIg = accounts.count { it.status == "ERROR" || it.status == "2FA_REQUIRED" }
 
-                auditLogs = logsDeferred.await()
+                auditLogs = service.getAuditLogs(10)
             } catch (e: Exception) {
                 errorMessage = e.toApiErrorMessage()
             } finally {

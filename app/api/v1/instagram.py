@@ -4,7 +4,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.database import get_db
 from app.core.security import encrypt_credential
-from app.api.deps import get_current_user
+from app.api.deps import (
+    get_current_user,
+    HasActivePermission,
+    InstagramPerms
+)
 from app.models.user import User
 from app.modules.instagram.models import InstagramAccount, InstagramRule, InstagramChatLog
 from app.schemas.instagram import (
@@ -20,7 +24,7 @@ from app.services.audit import log_audit_action
 router = APIRouter()
 
 # Accounts CRUD
-@router.post("/accounts", response_model=InstagramAccountResponse)
+@router.post("/accounts", response_model=InstagramAccountResponse, dependencies=[Depends(HasActivePermission(InstagramPerms.MANAGE_ACCOUNTS))])
 async def link_instagram_account(
     acc_in: InstagramAccountCreate,
     request: Request,
@@ -57,7 +61,7 @@ async def link_instagram_account(
     
     return account
 
-@router.get("/accounts", response_model=List[InstagramAccountResponse])
+@router.get("/accounts", response_model=List[InstagramAccountResponse], dependencies=[Depends(HasActivePermission(InstagramPerms.VIEW_ACCOUNTS))])
 async def list_instagram_accounts(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -65,7 +69,7 @@ async def list_instagram_accounts(
     result = await db.execute(select(InstagramAccount))
     return result.scalars().all()
 
-@router.delete("/accounts/{account_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/accounts/{account_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(HasActivePermission(InstagramPerms.MANAGE_ACCOUNTS))])
 async def delete_instagram_account(
     account_id: int,
     request: Request,
@@ -92,7 +96,7 @@ async def delete_instagram_account(
     return None
 
 # Rules CRUD
-@router.post("/accounts/{account_id}/rules", response_model=InstagramRuleResponse)
+@router.post("/accounts/{account_id}/rules", response_model=InstagramRuleResponse, dependencies=[Depends(HasActivePermission(InstagramPerms.MANAGE_RULES))])
 async def create_auto_reply_rule(
     account_id: int,
     rule_in: InstagramRuleCreate,
@@ -129,7 +133,7 @@ async def create_auto_reply_rule(
     
     return new_rule
 
-@router.get("/accounts/{account_id}/rules", response_model=List[InstagramRuleResponse])
+@router.get("/accounts/{account_id}/rules", response_model=List[InstagramRuleResponse], dependencies=[Depends(HasActivePermission(InstagramPerms.MANAGE_RULES))])
 async def list_auto_reply_rules(
     account_id: int,
     db: AsyncSession = Depends(get_db),
@@ -139,7 +143,7 @@ async def list_auto_reply_rules(
     return result.scalars().all()
 
 # Chat Log Audit Router
-@router.get("/accounts/{account_id}/logs", response_model=List[InstagramChatLogResponse])
+@router.get("/accounts/{account_id}/logs", response_model=List[InstagramChatLogResponse], dependencies=[Depends(HasActivePermission(InstagramPerms.VIEW_CHAT_LOGS))])
 async def list_instagram_chat_logs(
     account_id: int,
     db: AsyncSession = Depends(get_db),
@@ -153,7 +157,7 @@ async def list_instagram_chat_logs(
     return result.scalars().all()
 
 # Message Dispatcher Endpoint
-@router.post("/accounts/{account_id}/send-dm", response_model=dict)
+@router.post("/accounts/{account_id}/send-dm", response_model=dict, dependencies=[Depends(HasActivePermission(InstagramPerms.MANAGE_ACCOUNTS))])
 async def dispatch_direct_message(
     account_id: int,
     thread_id: str,
@@ -179,7 +183,7 @@ async def dispatch_direct_message(
     
     return {"message": f"Direct Message task submitted to background queue for execution."}
 
-@router.post("/accounts/{account_id}/connect", response_model=dict)
+@router.post("/accounts/{account_id}/connect", response_model=dict, dependencies=[Depends(HasActivePermission(InstagramPerms.MANAGE_ACCOUNTS))])
 async def trigger_account_connection(
     account_id: int,
     request: Request,

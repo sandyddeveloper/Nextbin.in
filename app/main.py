@@ -12,7 +12,7 @@ from app.core.database import engine
 from app.models.base import Base
 from app.core.logging import setup_logging
 from app.api.v1.api import api_router
-from app.core.middleware import RequestIdMiddleware, PlatformValidationMiddleware, SecurityHeadersMiddleware
+from app.core.middleware import RequestIdMiddleware, PlatformValidationMiddleware, SecurityHeadersMiddleware, ResponseStandardizationMiddleware
 
 # Initialize custom API rotating logger
 setup_logging("api")
@@ -31,6 +31,13 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
         
     logger.info("Database schema checks completed.")
+    
+    # Auto-seed roles and permissions
+    from app.core.database import SessionLocal
+    from app.core.setup import setup_roles_and_permissions
+    async with SessionLocal() as db:
+        await setup_roles_and_permissions(db)
+        
     yield
     logger.info("Shutting down nextbin server...")
 
@@ -78,51 +85,16 @@ app.openapi = custom_openapi
 
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from app.core.response import custom_exception_handler
 
-@app.exception_handler(StarletteHTTPException)
-async def http_exception_handler(request: Request, exc: StarletteHTTPException):
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={
-            "status": "failed",
-            "message": exc.detail,
-            "errors": None
-        }
-    )
-
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    errors = exc.errors()
-    err_msgs = []
-    for err in errors:
-        loc = ".".join(str(l) for l in err.get("loc", []))
-        msg = err.get("msg", "invalid value")
-        err_msgs.append(f"{loc}: {msg}")
-    friendly_message = "Request validation failed. " + ", ".join(err_msgs)
-    
-    return JSONResponse(
-        status_code=422,
-        content={
-            "status": "failed",
-            "message": friendly_message,
-            "errors": errors
-        }
-    )
-
-@app.exception_handler(Exception)
-async def general_exception_handler(request: Request, exc: Exception):
-    return JSONResponse(
-        status_code=500,
-        content={
-            "status": "failed",
-            "message": f"Internal Server Error: {str(exc)}",
-            "errors": None
-        }
-    )
+app.add_exception_handler(StarletteHTTPException, custom_exception_handler)
+app.add_exception_handler(RequestValidationError, custom_exception_handler)
+app.add_exception_handler(Exception, custom_exception_handler)
 
 
 
 # Custom security and tracking middlewares
+app.add_middleware(ResponseStandardizationMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(PlatformValidationMiddleware)
 app.add_middleware(RequestIdMiddleware)
