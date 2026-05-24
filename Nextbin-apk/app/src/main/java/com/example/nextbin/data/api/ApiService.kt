@@ -12,6 +12,12 @@ import retrofit2.http.*
 // 1. Data Models (API Requests & Responses)
 // ==========================================
 
+data class LoginResponseWrapper(
+    val status: String,
+    val message: String,
+    val data: TokenResponse
+)
+
 data class TokenResponse(
     @SerializedName("access_token") val accessToken: String,
     @SerializedName("token_type") val tokenType: String
@@ -119,6 +125,38 @@ data class AuditLog(
     val details: com.google.gson.JsonElement?,
     @SerializedName("created_at") val createdAt: String?
 )
+// Standardized API wrapper used by the server middleware: { status, message, data }
+data class ApiListProjects(
+    val status: String,
+    val message: String,
+    val data: List<MonitoredProject>
+)
+
+data class ApiListInstagramAccounts(
+    val status: String,
+    val message: String,
+    val data: List<InstagramAccount>
+)
+
+data class ApiListAuditLogs(
+    val status: String,
+    val message: String,
+    val data: List<AuditLog>
+)
+
+data class ApiListPerformanceMetric(
+    val status: String,
+    val message: String,
+    val data: List<PerformanceMetric>
+)
+
+// Generic wrapper matching server middleware output: { status, message, data }
+data class ApiWrapper<T>(
+    val status: String,
+    val message: String,
+    val data: T
+)
+
 
 // ==========================================
 // 2. Retrofit API Service Interface
@@ -127,45 +165,44 @@ data class AuditLog(
 interface ApiService {
 
     // Auth
-    @FormUrlEncoded
+    @Headers("Content-Type: application/json")
     @POST("api/v1/auth/login")
     suspend fun login(
-        @Field("username") email: String,
-        @Field("password") password: String
-    ): TokenResponse
+        @Body request: com.google.gson.JsonObject
+    ): LoginResponseWrapper
 
     @GET("api/v1/auth/me")
-    suspend fun getMe(): UserResponse
+    suspend fun getMe(): ApiWrapper<UserResponse>
 
     @PUT("api/v1/auth/me")
     suspend fun updateMe(
         @Body update: UserUpdate
-    ): UserResponse
+    ): ApiWrapper<UserResponse>
 
     @GET("api/v1/auth/audit-logs")
     suspend fun getAuditLogs(
         @Query("limit") limit: Int = 100
-    ): List<AuditLog>
+    ): ApiListAuditLogs
 
     // Web Monitors
     @GET("api/v1/projects/")
-    suspend fun getProjects(): List<MonitoredProject>
+    suspend fun getProjects(): ApiListProjects
 
     @POST("api/v1/projects/")
     suspend fun createProject(
         @Body project: MonitoredProjectCreate
-    ): MonitoredProject
+    ): ApiWrapper<MonitoredProject>
 
     @GET("api/v1/projects/{project_id}")
     suspend fun getProject(
         @Path("project_id") projectId: Int
-    ): MonitoredProject
+    ): ApiWrapper<MonitoredProject>
 
     @PUT("api/v1/projects/{project_id}")
     suspend fun updateProject(
         @Path("project_id") projectId: Int,
         @Body project: MonitoredProjectUpdate
-    ): MonitoredProject
+    ): ApiWrapper<MonitoredProject>
 
     @DELETE("api/v1/projects/{project_id}")
     suspend fun deleteProject(
@@ -176,21 +213,21 @@ interface ApiService {
     suspend fun getProjectMetrics(
         @Path("project_id") projectId: Int,
         @Query("limit") limit: Int = 100
-    ): List<PerformanceMetric>
+    ): ApiListPerformanceMetric
 
     @POST("api/v1/projects/{project_id}/trigger")
     suspend fun triggerManualPing(
         @Path("project_id") projectId: Int
-    ): Map<String, String>
+    ): ApiWrapper<Map<String, String>>
 
     // Instagram Accounts
     @GET("api/v1/instagram/accounts")
-    suspend fun getInstagramAccounts(): List<InstagramAccount>
+    suspend fun getInstagramAccounts(): ApiListInstagramAccounts
 
     @POST("api/v1/instagram/accounts")
     suspend fun linkInstagramAccount(
         @Body account: InstagramAccountCreate
-    ): InstagramAccount
+    ): ApiWrapper<InstagramAccount>
 
     @DELETE("api/v1/instagram/accounts/{account_id}")
     suspend fun deleteInstagramAccount(
@@ -200,25 +237,25 @@ interface ApiService {
     @POST("api/v1/instagram/accounts/{account_id}/connect")
     suspend fun triggerAccountConnection(
         @Path("account_id") accountId: Int
-    ): Map<String, String>
+    ): ApiWrapper<Map<String, String>>
 
     // Instagram Rules
     @GET("api/v1/instagram/accounts/{account_id}/rules")
     suspend fun getInstagramRules(
         @Path("account_id") accountId: Int
-    ): List<InstagramRule>
+    ): ApiWrapper<List<InstagramRule>>
 
     @POST("api/v1/instagram/accounts/{account_id}/rules")
     suspend fun createInstagramRule(
         @Path("account_id") accountId: Int,
         @Body rule: InstagramRuleCreate
-    ): InstagramRule
+    ): ApiWrapper<InstagramRule>
 
     // Instagram Logs
     @GET("api/v1/instagram/accounts/{account_id}/logs")
     suspend fun getInstagramChatLogs(
         @Path("account_id") accountId: Int
-    ): List<InstagramChatLog>
+    ): ApiWrapper<List<InstagramChatLog>>
 
     // Send DM (FastAPI expects thread_id and text as query parameters)
     @POST("api/v1/instagram/accounts/{account_id}/send-dm")
@@ -226,7 +263,7 @@ interface ApiService {
         @Path("account_id") accountId: Int,
         @Query("thread_id") threadId: String,
         @Query("text") text: String
-    ): Map<String, String>
+    ): ApiWrapper<Map<String, String>>
 }
 
 // ==========================================
@@ -290,7 +327,7 @@ data class ApiErrorResponse(
     val status: String?,
     val message: String?,
     val errors: Any?,
-    val detail: String?
+    val detail: Any?
 )
 
 fun Throwable.toApiErrorMessage(): String {
@@ -299,7 +336,13 @@ fun Throwable.toApiErrorMessage(): String {
             val errorBody = response()?.errorBody()?.string()
             try {
                 val parsed = com.google.gson.Gson().fromJson(errorBody, ApiErrorResponse::class.java)
-                parsed.message ?: parsed.detail ?: "Error ${code()}: ${message()}"
+                
+                // Handle complex detail fields
+                if (parsed.detail is List<*>) {
+                    return parsed.detail.joinToString("\n") { it.toString() }
+                }
+                
+                parsed.message ?: parsed.detail?.toString() ?: "Error ${code()}: ${message()}"
             } catch (ex: Exception) {
                 "Error ${code()}: ${message()}"
             }
@@ -308,4 +351,3 @@ fun Throwable.toApiErrorMessage(): String {
         else -> this.localizedMessage ?: "An unexpected error occurred."
     }
 }
-

@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nextbin.data.PrefManager
@@ -63,7 +64,8 @@ fun ProfileTab(
             errorMessage = null
             try {
                 val service = ApiClient.getService()
-                val profile = service.getMe()
+                val profileRes = service.getMe()
+                val profile = profileRes.data
                 user = profile
                 nameInput = profile.fullName ?: ""
                 emailInput = profile.email ?: ""
@@ -122,7 +124,6 @@ fun ProfileTab(
                 border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(BorderColor, Color(0xFF334155))))
             ) {
                 Box(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
-                    // Accent ambient glow (top right)
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
@@ -139,7 +140,6 @@ fun ProfileTab(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // Avatar Circle
                         Box(
                             modifier = Modifier
                                 .size(72.dp)
@@ -157,7 +157,6 @@ fun ProfileTab(
                             )
                         }
 
-                        // Info Column
                         Column(modifier = Modifier.weight(1f)) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -210,7 +209,10 @@ fun ProfileTab(
                     InfoRow(icon = Icons.Default.Mail, label = "Email Address", value = user?.email ?: "—")
                     InfoRow(icon = Icons.Default.Shield, label = "Permission Level", value = if (user?.isSuperuser == true) "Superuser (L2)" else "Administrator (L1)")
                     InfoRow(icon = Icons.Default.Computer, label = "Active Platform", value = "Android App")
-                    InfoRow(icon = Icons.Default.Dns, label = "Server Connection", value = prefManager.serverUrl ?: "—", isLast = true)
+                    
+                    // Repaired Server Connection Row
+                    val baseUrl = ApiClient.baseUrl
+                    InfoRow(icon = Icons.Default.Dns, label = "Server Connection", value = baseUrl.ifBlank { "Not set" }, isLast = true)
                 }
             }
 
@@ -315,13 +317,14 @@ fun ProfileTab(
                                         updateError = null
                                         try {
                                             val service = ApiClient.getService()
-                                            val updatedUser = service.updateMe(
+                                            val updatedRes = service.updateMe(
                                                 UserUpdate(
                                                     email = emailInput.takeIf { it.isNotBlank() && it != user?.email },
                                                     fullName = nameInput.takeIf { it.isNotBlank() && it != user?.fullName },
                                                     password = passwordInput.takeIf { it.isNotBlank() }
                                                 )
                                             )
+                                            val updatedUser = updatedRes.data
                                             user = updatedUser
                                             prefManager.userEmail = updatedUser.email
                                             passwordInput = ""
@@ -469,7 +472,7 @@ fun ProfileTab(
         }
     }
 }
-
+// ... (BadgeLabel, CardHeader, InfoRow remain the same)
 @Composable
 fun BadgeLabel(
     text: String,
@@ -531,7 +534,6 @@ fun InfoRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 14.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
@@ -546,13 +548,16 @@ fun InfoRow(
             Spacer(modifier = Modifier.width(10.dp))
             Text(label, color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Medium)
         }
+        Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = value,
             color = TextPrimary,
             fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.End,
-            modifier = Modifier.padding(start = 12.dp)
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
         )
     }
     if (!isLast) {

@@ -19,6 +19,9 @@ class SystemPerms:
     MANAGE_STAFF = "manage_staff"
     MANAGE_ROLES = "manage_roles"
     VIEW_AUDIT_LOGS = "view_audit_logs"
+    VIEW_API_LOGS = "view_api_logs"
+    VIEW_ERROR_LOGS = "view_error_logs"
+    VIEW_ALL_LOGS = "view_all_logs"
 
 class InstagramPerms:
     MANAGE_ACCOUNTS = "manage_instagram_accounts"
@@ -44,6 +47,9 @@ PERMISSION_DESCRIPTIONS = {
     SystemPerms.MANAGE_STAFF: "Can register and configure staff roles",
     SystemPerms.MANAGE_ROLES: "Can create and edit permission matrices for roles",
     SystemPerms.VIEW_AUDIT_LOGS: "Can view security audit logs",
+    SystemPerms.VIEW_API_LOGS: "Can view backend API log file contents",
+    SystemPerms.VIEW_ERROR_LOGS: "Can inspect filtered application error logs",
+    SystemPerms.VIEW_ALL_LOGS: "Can access all configured log files",
     InstagramPerms.MANAGE_ACCOUNTS: "Can link and connect Instagram credentials",
     InstagramPerms.VIEW_ACCOUNTS: "Can view connected Instagram profiles",
     InstagramPerms.VIEW_CHAT_LOGS: "Can inspect automated response logs",

@@ -38,15 +38,16 @@ fun DashboardScreen(
                     Column {
                         Text(
                             text = if (showProfile) "Profile" else "Nextbin.in Control",
-                            fontSize = 18.sp,
+                            fontSize = 20.sp,
                             fontWeight = FontWeight.Black,
                             color = Color.White
                         )
                         if (!showProfile) {
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = prefManager.serverUrl ?: "",
-                                fontSize = 10.sp,
-                                color = Color.Gray,
+                                text = "Live monitoring, security events, and Instagram agents at a glance",
+                                fontSize = 12.sp,
+                                color = Color.LightGray,
                                 fontWeight = FontWeight.Medium
                             )
                         }
@@ -73,7 +74,8 @@ fun DashboardScreen(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = SurfaceCard,
                     titleContentColor = Color.White
-                )
+                ),
+                modifier = Modifier.height(88.dp)
             )
         },
         bottomBar = {
@@ -150,7 +152,10 @@ fun DashboardScreen(
                 ProfileTab(refreshTrigger = refreshTrigger, onLogout = onLogout)
             } else {
                 when (selectedTab) {
-                    0 -> DashboardOverviewTab(refreshTrigger = refreshTrigger)
+                    0 -> DashboardOverviewTab(
+                        refreshTrigger = refreshTrigger,
+                        onViewAllAuditLogs = { selectedTab = 3 }
+                    )
                     1 -> MonitorsTab(refreshTrigger = refreshTrigger)
                     2 -> InstagramTab(refreshTrigger = refreshTrigger)
                     3 -> AuditLogsTab(refreshTrigger = refreshTrigger)

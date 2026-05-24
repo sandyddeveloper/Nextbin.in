@@ -17,13 +17,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nextbin.data.api.*
 import com.example.nextbin.theme.*
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
-fun DashboardOverviewTab(refreshTrigger: Int) {
+fun DashboardOverviewTab(
+    refreshTrigger: Int,
+    onViewAllAuditLogs: () -> Unit
+) {
     val scope = rememberCoroutineScope()
     var isLoading by remember { mutableStateOf(true) }
     var monitorsCount by remember { mutableStateOf(0) }
@@ -42,17 +44,20 @@ fun DashboardOverviewTab(refreshTrigger: Int) {
             try {
                 val service = ApiClient.getService()
 
-                val projects = service.getProjects()
+                val projectsRes = service.getProjects()
+                val projects = projectsRes.data
                 monitorsCount = projects.size
                 upMonitors = projects.count { it.lastStatus == "UP" }
                 downMonitors = projects.count { it.lastStatus == "DOWN" }
 
-                val accounts = service.getInstagramAccounts()
+                val accountsRes = service.getInstagramAccounts()
+                val accounts = accountsRes.data
                 igCount = accounts.size
                 connectedIg = accounts.count { it.status == "CONNECTED" }
                 issueIg = accounts.count { it.status == "ERROR" || it.status == "2FA_REQUIRED" }
 
-                auditLogs = service.getAuditLogs(10)
+                val logsResponse = service.getAuditLogs(10)
+                auditLogs = logsResponse.data
             } catch (e: Exception) {
                 errorMessage = e.toApiErrorMessage()
             } finally {
@@ -120,20 +125,49 @@ fun DashboardOverviewTab(refreshTrigger: Int) {
 
             // Recent Audit Stream
             item {
-                Text("RECENT AUDIT STREAM", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(SurfaceCard, shape = RoundedCornerShape(16.dp))
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("RECENT AUDIT STREAM", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "Top 5 recent security events from your system",
+                            color = Color.LightGray,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    TextButton(onClick = onViewAllAuditLogs) {
+                        Text("See more", color = Primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "See more",
+                            tint = Primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
             }
 
             if (auditLogs.isEmpty()) {
                 item {
                     Box(
-                        modifier = Modifier.fillMaxWidth().height(100.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(100.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text("No audit events recorded", color = Color.Gray, fontSize = 13.sp)
                     }
                 }
             } else {
-                items(auditLogs) { log ->
+                items(auditLogs.take(5)) { log ->
                     AuditStreamItem(log = log)
                 }
             }

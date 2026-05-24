@@ -55,7 +55,8 @@ fun MonitorsTab(refreshTrigger: Int) {
             errorMessage = null
             try {
                 val service = ApiClient.getService()
-                projects = service.getProjects()
+                val projectsRes = service.getProjects()
+                projects = projectsRes.data
             } catch (e: Exception) {
                 errorMessage = e.toApiErrorMessage()
             } finally {
@@ -266,7 +267,8 @@ fun MonitorItemCard(
             isLoadingMetrics = true
             try {
                 val service = ApiClient.getService()
-                metrics = service.getProjectMetrics(project.id, limit = 15)
+                val metricsRes = service.getProjectMetrics(project.id, limit = 15)
+                metrics = metricsRes.data
             } catch (e: Exception) {
                 // Ignore metrics errors
             } finally {

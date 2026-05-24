@@ -1,3 +1,5 @@
+from collections import deque
+from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -14,7 +16,7 @@ from app.api.deps import (
     NilagravityPerms
 )
 from app.models.user import User
-from app.models.rbac import Permission, Role
+from app.models.rbac import Permission, Role, user_roles
 from app.models.staff import StaffMaster
 from app.core.permission import CoreSystemRoles, ALL_PERMISSIONS
 from app.schemas.rbac import (
@@ -30,6 +32,18 @@ from app.core.response import APIResponse
 from app.core.security import get_password_hash
 
 router = APIRouter()
+
+LOG_DIR = Path(__file__).resolve().parents[3] / "logs"
+
+def tail_log_file(file_path: Path, lines: int = 200) -> list[str]:
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Log file not found: {file_path.name}"
+        )
+
+    with file_path.open("r", encoding="utf-8", errors="ignore") as f:
+        return [line.rstrip("\n") for line in deque(f, maxlen=lines)]
 
 @router.get(
     "/permissions",
@@ -207,6 +221,74 @@ async def delete_role(role_id: int, db: AsyncSession = Depends(get_db)):
     await db.commit()
 
     return APIResponse(message="Role deleted successfully.", data={})
+
+
+@router.get(
+    "/logs/api",
+    dependencies=[Depends(HasActivePermission(SystemPerms.VIEW_API_LOGS))]
+)
+async def read_api_log(lines: int = 200):
+    """
+    Retrieve the latest API log entries.
+    """
+    api_log = LOG_DIR / "api.log"
+    return APIResponse(
+        message="API log entries fetched successfully.",
+        data={
+            "file": api_log.name,
+            "lines": tail_log_file(api_log, lines)
+        }
+    )
+
+
+@router.get(
+    "/logs/error",
+    dependencies=[Depends(HasActivePermission(SystemPerms.VIEW_ERROR_LOGS))]
+)
+async def read_error_log(lines: int = 200):
+    """
+    Retrieve the latest error entries from the API log.
+    """
+    api_log = LOG_DIR / "api.log"
+    error_lines = [
+        line for line in tail_log_file(api_log, max(lines * 5, 500))
+        if "ERROR" in line or "Error" in line or "error" in line
+    ]
+    return APIResponse(
+        message="Error log entries fetched successfully.",
+        data={
+            "file": api_log.name,
+            "lines": error_lines[-lines:]
+        }
+    )
+
+
+@router.get(
+    "/logs/all",
+    dependencies=[Depends(HasActivePermission(SystemPerms.VIEW_ALL_LOGS))]
+)
+async def read_all_logs(lines: int = 200):
+    """
+    Retrieve the latest entries from all configured log files.
+    """
+    if not LOG_DIR.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Logs directory not found."
+        )
+
+    files = sorted(LOG_DIR.glob("*.log"))
+    data = {}
+    for file_path in files:
+        data[file_path.name] = tail_log_file(file_path, lines)
+
+    return APIResponse(
+        message="All log files fetched successfully.",
+        data={
+            "files": [file.name for file in files],
+            "logs": data
+        }
+    )
 
 
 @router.post(

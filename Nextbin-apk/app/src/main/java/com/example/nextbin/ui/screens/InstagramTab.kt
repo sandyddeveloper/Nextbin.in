@@ -45,7 +45,8 @@ fun InstagramTab(refreshTrigger: Int) {
             errorMessage = null
             try {
                 val service = ApiClient.getService()
-                accounts = service.getInstagramAccounts()
+                val accountsRes = service.getInstagramAccounts()
+                accounts = accountsRes.data
             } catch (e: Exception) {
                 errorMessage = e.toApiErrorMessage()
             } finally {
@@ -307,7 +308,8 @@ fun InstagramAccountCard(
                                 scope.launch {
                                     try {
                                         val service = ApiClient.getService()
-                                        chatLogs = service.getInstagramChatLogs(account.id)
+                                        val logsRes = service.getInstagramChatLogs(account.id)
+                                        chatLogs = logsRes.data
                                         showChatLogsDialog = true
                                     } catch (e: Exception) {}
                                 }
@@ -324,7 +326,8 @@ fun InstagramAccountCard(
                                 scope.launch {
                                     try {
                                         val service = ApiClient.getService()
-                                        replyRules = service.getInstagramRules(account.id)
+                                        val rulesRes = service.getInstagramRules(account.id)
+                                        replyRules = rulesRes.data
                                         showRulesDialog = true
                                     } catch (e: Exception) {}
                                 }
@@ -542,7 +545,8 @@ fun InstagramAccountCard(
                                         ruleResponse = ""
                                         
                                         // Reload list
-                                        replyRules = service.getInstagramRules(account.id)
+                                        val rulesRes2 = service.getInstagramRules(account.id)
+                                        replyRules = rulesRes2.data
                                     } catch (e: Exception) {} finally {
                                         isAddingRule = false
                                     }

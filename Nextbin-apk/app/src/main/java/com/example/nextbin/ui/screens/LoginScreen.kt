@@ -24,6 +24,7 @@ import com.example.nextbin.theme.Background
 import com.example.nextbin.theme.Primary
 import com.example.nextbin.theme.PrimaryVariant
 import com.example.nextbin.theme.SurfaceCard
+import com.google.gson.JsonObject
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -158,11 +159,15 @@ fun LoginScreen(
                         errorMessage = null
                         try {
                             val service = ApiClient.getService()
-                            val response = service.login(email, password)
+                            val jsonBody = JsonObject().apply {
+                                addProperty("email", email)
+                                addProperty("password", password)
+                            }
+                            val response = service.login(jsonBody)
                             
-                            prefManager.authToken = response.accessToken
+                            prefManager.authToken = response.data.accessToken
                             prefManager.userEmail = email
-                            ApiClient.setAuthToken(response.accessToken)
+                            ApiClient.setAuthToken(response.data.accessToken)
                             
                             onLoginSuccess()
                         } catch (e: Exception) {

@@ -39,7 +39,9 @@ fun AuditLogsTab(refreshTrigger: Int) {
             errorMessage = null
             try {
                 val service = ApiClient.getService()
-                logs = service.getAuditLogs(limit = 100)
+                val response = service.getAuditLogs(limit = 100)
+                // API returns a standardized wrapper with `data` key
+                logs = response.data
             } catch (e: Exception) {
                 errorMessage = e.toApiErrorMessage()
             } finally {
@@ -153,7 +155,7 @@ fun AuditLogItemCard(log: AuditLog) {
                 exit = shrinkVertically() + fadeOut()
             ) {
                 Column(modifier = Modifier.padding(top = 12.dp)) {
-                    Divider(color = Color(0xFF1E293B), modifier = Modifier.padding(bottom = 8.dp))
+                    HorizontalDivider(color = Color(0xFF1E293B), modifier = Modifier.padding(bottom = 8.dp))
                     
                     Text("Metadata Details", color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(4.dp))
