@@ -56,8 +56,8 @@ fun DashboardOverviewTab(
                 connectedIg = accounts.count { it.status == "CONNECTED" }
                 issueIg = accounts.count { it.status == "ERROR" || it.status == "2FA_REQUIRED" }
 
-                val logsResponse = service.getAuditLogs(10)
-                auditLogs = logsResponse.data
+                val logsResponse = service.getAuditLogs(skip = 0, limit = 10)
+                auditLogs = logsResponse.data.data
             } catch (e: Exception) {
                 errorMessage = e.toApiErrorMessage()
             } finally {

@@ -227,9 +227,9 @@ async def delete_role(role_id: int, db: AsyncSession = Depends(get_db)):
     "/logs/api",
     dependencies=[Depends(HasActivePermission(SystemPerms.VIEW_API_LOGS))]
 )
-async def read_api_log(lines: int = 200):
+async def read_api_log(lines: int = 10):
     """
-    Retrieve the latest API log entries.
+    Retrieve the latest 10 API log entries.
     """
     api_log = LOG_DIR / "api.log"
     return APIResponse(
@@ -245,13 +245,13 @@ async def read_api_log(lines: int = 200):
     "/logs/error",
     dependencies=[Depends(HasActivePermission(SystemPerms.VIEW_ERROR_LOGS))]
 )
-async def read_error_log(lines: int = 200):
+async def read_error_log(lines: int = 10):
     """
-    Retrieve the latest error entries from the API log.
+    Retrieve the latest 10 error entries from the API log.
     """
     api_log = LOG_DIR / "api.log"
     error_lines = [
-        line for line in tail_log_file(api_log, max(lines * 5, 500))
+        line for line in tail_log_file(api_log, max(lines * 5, 100))
         if "ERROR" in line or "Error" in line or "error" in line
     ]
     return APIResponse(
@@ -267,9 +267,9 @@ async def read_error_log(lines: int = 200):
     "/logs/all",
     dependencies=[Depends(HasActivePermission(SystemPerms.VIEW_ALL_LOGS))]
 )
-async def read_all_logs(lines: int = 200):
+async def read_all_logs(lines: int = 10):
     """
-    Retrieve the latest entries from all configured log files.
+    Retrieve the latest 10 entries from all configured log files.
     """
     if not LOG_DIR.exists():
         raise HTTPException(

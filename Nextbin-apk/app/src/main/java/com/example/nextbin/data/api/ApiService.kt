@@ -141,7 +141,24 @@ data class ApiListInstagramAccounts(
 data class ApiListAuditLogs(
     val status: String,
     val message: String,
+    val data: AuditLogsPage
+)
+
+data class AuditLogsPage(
+    val total: Int,
+    val skip: Int,
+    val limit: Int,
     val data: List<AuditLog>
+)
+
+data class LogFileResponse(
+    val file: String,
+    val lines: List<String>
+)
+
+data class AllLogFilesResponse(
+    val files: List<String>,
+    val logs: Map<String, List<String>>
 )
 
 data class ApiListPerformanceMetric(
@@ -181,8 +198,24 @@ interface ApiService {
 
     @GET("api/v1/auth/audit-logs")
     suspend fun getAuditLogs(
-        @Query("limit") limit: Int = 100
+        @Query("skip") skip: Int = 0,
+        @Query("limit") limit: Int = 10
     ): ApiListAuditLogs
+
+    @GET("api/v1/admin/logs/api")
+    suspend fun getApiLogs(
+        @Query("lines") lines: Int = 10
+    ): ApiWrapper<LogFileResponse>
+
+    @GET("api/v1/admin/logs/error")
+    suspend fun getErrorLogs(
+        @Query("lines") lines: Int = 10
+    ): ApiWrapper<LogFileResponse>
+
+    @GET("api/v1/admin/logs/all")
+    suspend fun getAllLogs(
+        @Query("lines") lines: Int = 10
+    ): ApiWrapper<AllLogFilesResponse>
 
     // Web Monitors
     @GET("api/v1/projects/")

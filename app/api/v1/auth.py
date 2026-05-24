@@ -229,24 +229,36 @@ from app.models.audit import AuditLog
 
 @router.get(
     "/audit-logs",
-    response_model=list[dict],
+    response_model=dict,
     dependencies=[Depends(HasActivePermission(SystemPerms.VIEW_AUDIT_LOGS))]
 )
 async def read_audit_logs(
-    limit: int = 100,
+    skip: int = 0,
+    limit: int = 10,
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Retrieve security audit logs.
+    Retrieve paginated security audit logs (latest first).
+    Parameters:
+    - skip: number of records to skip (for pagination)
+    - limit: maximum number of records to return (default: 10)
     """
+    from sqlalchemy import func
+    
+    # Get total count
+    count_result = await db.execute(select(func.count(AuditLog.id)))
+    total_count = count_result.scalar_one()
+    
+    # Get paginated logs (latest first)
     result = await db.execute(
         select(AuditLog)
         .order_by(desc(AuditLog.created_at))
+        .offset(skip)
         .limit(limit)
     )
     logs = result.scalars().all()
     
-    return [
+    logs_data = [
         {
             "id": log.id,
             "user_id": log.user_id,
@@ -259,3 +271,10 @@ async def read_audit_logs(
         }
         for log in logs
     ]
+    
+    return {
+        "total": total_count,
+        "skip": skip,
+        "limit": limit,
+        "data": logs_data
+    }

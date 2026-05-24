@@ -32,6 +32,7 @@ fun AuditLogsTab(refreshTrigger: Int) {
     var isLoading by remember { mutableStateOf(true) }
     var logs by remember { mutableStateOf<List<AuditLog>>(emptyList()) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    val limit = 100
 
     fun loadLogs() {
         scope.launch {
@@ -39,9 +40,9 @@ fun AuditLogsTab(refreshTrigger: Int) {
             errorMessage = null
             try {
                 val service = ApiClient.getService()
-                val response = service.getAuditLogs(limit = 100)
-                // API returns a standardized wrapper with `data` key
-                logs = response.data
+                // API returns ApiListAuditLogs which has 'data' (AuditLogsPage) which has 'data' (List<AuditLog>)
+                val response = service.getAuditLogs(skip = 0, limit = limit)
+                logs = response.data.data
             } catch (e: Exception) {
                 errorMessage = e.toApiErrorMessage()
             } finally {
